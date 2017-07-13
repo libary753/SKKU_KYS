@@ -1,0 +1,12 @@
+# data set
+
+x_train = [1,2,3]
+y_tarin =[1,2,3]
+
+w = tf.variable(tf.random_normal([1]),name = 'weight')
+b = tf.variable(tf.random_normal([1]),name = 'bias')
+
+hypothesis = x+train * w + b
+
+cost = tf.reducd_mean(tf.square(hypothesis - y_train))
+
