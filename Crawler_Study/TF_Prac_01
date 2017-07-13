@@ -1,0 +1,5 @@
+import tensorflow as tf
+
+# Create a constant op
+
+hello = tf.constant ("Hello, TensorFlow!")
