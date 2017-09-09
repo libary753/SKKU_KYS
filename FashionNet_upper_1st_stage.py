@@ -6,7 +6,7 @@ import csv
 import datetime
 
 
-class FashionNet_1st:
+class FashionNet:
     def __init__(self):
         self.RGB_MEAN = np.array([[ 102.9801, 115.9465, 122.7717]],dtype=np.float32)
         self.img = tf.placeholder(tf.float32, [None, 224, 224, 3])
@@ -93,49 +93,46 @@ class FashionNet_1st:
         shape = int(np.prod(self.pool_5.get_shape()[1:]))
         self.pool_5_flat = tf.reshape(self.pool_5, [-1, shape])        
         self.fc_1=self.fc_layer(self.pool_5_flat,shape,4096,fcSt,fcB,'fc_1',dropout=Dropout)
-        self.fc_2 = self.fc_layer(self.fc_1,4096,4096,fcSt,fcB,'fc_2',dropout=Dropout)
-        self.fc_3_visibility_1 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_1',relu=False)
-        self.fc_3_visibility_2 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_2',relu=False)
-        self.fc_3_visibility_3 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_3',relu=False)
-        self.fc_3_visibility_4 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_4',relu=False)
-        self.fc_3_visibility_5 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_5',relu=False)
-        self.fc_3_visibility_6 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_6',relu=False)
-        self.fc_3_visibility_7 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_7',relu=False)
-        self.fc_3_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
-        self.out_visibility_1=tf.nn.softmax(self.fc_3_visibility_1)
-        self.out_visibility_2=tf.nn.softmax(self.fc_3_visibility_2)
-        self.out_visibility_3=tf.nn.softmax(self.fc_3_visibility_3)
-        self.out_visibility_4=tf.nn.softmax(self.fc_3_visibility_4)
-        self.out_visibility_5=tf.nn.softmax(self.fc_3_visibility_5)
-        self.out_visibility_6=tf.nn.softmax(self.fc_3_visibility_6)
-        self.out_visibility_7=tf.nn.softmax(self.fc_3_visibility_7)
-        self.out_visibility_8=tf.nn.softmax(self.fc_3_visibility_8)
-
-
+        self.fc_2 = self.fc_layer(self.fc_1,4096,4096,fcSt,fcB,'fc_2',dropout=Dropout) 
+        self.fc_3_softlabel=self.fc_layer(self.fc_2,4096,20,fcSt,fcB,'fc_3_pose_softlabel')
         
+        self.out_softlabel = tf.nn.softmax(self.fc_3_softlabel,name='out_softlabel')
         self.out_landmark_x =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
         self.out_landmark_y =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
-        self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6,self.fc_3_visibility_7,self.fc_3_visibility_8],0)
-        #수정필요함
-        self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8]
-      
+        self.out_visibility_1 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_1',relu=False)
+        self.out_visibility_2 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_2',relu=False)
+        self.out_visibility_3 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_3',relu=False)
+        self.out_visibility_4 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_4',relu=False)
+        self.out_visibility_5 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_5',relu=False)
+        self.out_visibility_6 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_6',relu=False)
+        self.out_visibility_7 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_7',relu=False)
+        self.out_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
+
+        self.out = tf.concat([self.out_softlabel,self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8],1)
+    
     #save model
     def save_model(self,sess,path):
         self.saver = tf.train.Saver(self.param)
         self.saver.save(sess,path)           
 
     #restore model
-    #fn.restore_model(sess,'C:/Users/libar/Desktop/save_full/init/model')
+    #fn.restore_model(sess,'C:/Users/libar/Desktop/save/init/model')
     def restore_model(self,sess,path):
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver(self.param)
         saver.restore(sess,path)
         
     #restore vgg model
-    #fn.restore_vgg(sess,'C:/Users/libar/Desktop/save_full/vgg16/model')
+    #fn.restore_vgg(sess,'C:/Users/libar/Desktop/save/vgg16/model')
     def restore_vgg(self,sess,path):
         sess.run(tf.global_variables_initializer())
         param_vgg=self.param[:26]
         saver = tf.train.Saver(param_vgg)
         saver.restore(sess,path)
         
+def run():
+    fn=FashionNet()
+    fn.build_net()
+    fn.sess=tf.Session()
+    fn.sess.run(tf.global_variables_initializer())
+    fn.restore_model('C:/Users/libar/Desktop/model/full/stage1/model')
