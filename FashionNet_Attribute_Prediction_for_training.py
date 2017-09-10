@@ -61,12 +61,12 @@ class FashionNet_2nd:
                 y=int((landmark_y[i][j]+0.5)*28)
                 
                 x=max(1,x)
-                x=min(222,x)
+                x=min(26,x)
                 y=max(1,x)
-                y=min(222,x)
+                y=min(26,x)
                 
                 roi = np.zeros((3,3,512),dtype=np.float32)
-                roi = conv_4[i,y-1:y+2,x-1:x+2]
+                roi = conv_4[i,x-1:x+2,y-1:y+2]
                 roi_concat[j]=roi
             self.landmark_roi[i]=roi_concat
         

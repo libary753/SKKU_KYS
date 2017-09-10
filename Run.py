@@ -169,7 +169,7 @@ class test:
         category_output=self.category_list[batSize*batNum:batSize*(batNum+1)]
         category_prob=np.zeros((batSize,50))
         for i in range(batSize):
-            category_prob[i][int(self.category_list[batSize*batNum+i])]=1
+            category_prob[i][int(self.category_list[batSize*batNum+i])-1]=1
         
         self.landmark_v=self.visibility_list[batSize*batNum:batSize*(batNum+1),:]%2
         self.landmark_x=self.x_list[batSize*batNum:batSize*(batNum+1),:] 
@@ -197,7 +197,7 @@ class test:
     
     def define_loss_attribute(self,fn,batSize):
         self.output_category = tf.placeholder(tf.float32, [batSize, 50])
-        self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_categoty_prob)
+        self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
         
     def train_landmark(self):
         test.readCsv_attribute('full')
@@ -232,12 +232,8 @@ class test:
                     print('landmark loss: ',l1)
                     print('visibility loss: ',l2)
                     print(out[0][0])
-                    print(out[1][0])
-                    print(out[2][0])
                     print('..............................................................')
                     print(test.output[2][0])
-                    print(test.output[3][0])
-                    print(test.output[1][0][0])
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
                         fn.save_model(sess,'C:/Users/libar/Desktop/save_full/'+str(j)+' epoch/'+str(i)+'/model')
@@ -248,7 +244,7 @@ class test:
         test.readCsv_attribute('full')
         fn=fashionnet_3.FashionNet_2nd()
         fn.build_net(Dropout=True)
-        batsize=15
+        batsize=25
         self.define_loss_attribute(fn,batSize=batsize)
         #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
         learningRate = 0.0001
@@ -264,38 +260,38 @@ class test:
         for j in range(1,6):
             self.readCsv_attribute('full')
             for i in range(2620):
-                self.load_batch_for_landmark(i,batsize)
-                
-                sess.run([train],feed_dict={fn.img:self.batch,fn.keep_prob:0.5,self.output_vis:self.output[0]%2,self.output_vis_prob:self.output[1],self.output_x:self.output[2],self.output_y:self.output[3]})
+                self.load_batch_for_attribute(i,batsize)
+                conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:test.batch})
+                fn.get_roi(test.landmark_x,test.landmark_y,conv_4,batsize)
+                sess.run(train,feed_dict={fn.imgs:test.batch,fn.landmark_visibility:test.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.output[1],fn.keep_prob:0.5})
                 if i%50 is 0:
-                    [l1,l2,out]=sess.run([self.loss_landmark,self.loss_visibility,fn.out],feed_dict={fn.img:self.batch,fn.keep_prob:0.5,self.output_vis:self.output[0]%2,self.output_vis_prob:self.output[1],self.output_x:self.output[2],self.output_y:self.output[3]})
+                    [l1,out]=sess.run([loss,fn.out_category_prob],feed_dict={fn.imgs:test.batch,fn.landmark_visibility:test.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.output[1],fn.keep_prob:0.5})
                     print('< ',str(j),' epoch, ',str(i),'번째 batch >')
-                    print('landmark loss: ',l1)
-                    print('visibility loss: ',l2)
-                    print(out[0][0])
-                    print(out[1][0])
-                    print(out[2][0])
-                    print('..............................................................')
-                    print(test.output[2][0])
-                    print(test.output[3][0])
-                    print(test.output[1][0][0])
+                    print('loss: ',l1)
+                    print(test.output[0])
+                    print(out[0])
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
                         fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/'+str(i)+'/model')
                         
             fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/final/model')
-"""   
+            
+test=test()
+test.train_attribute()
+"""
 test=test()
 test.readCsv_attribute('full')
-batsize=3
-test.load_batch_for_attribute(0,batsize)
+batsize=5
+test.load_batch_for_attribute(25,batsize)
 fn=fashionnet_3.FashionNet_2nd()
 fn.build_net()
 sess=tf.Session()
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model')
 sess.run(tf.global_variables_initializer())
 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:test.batch})
 fn.get_roi(test.landmark_x,test.landmark_y,conv_4,batsize)
 result=sess.run(fn.out_category_prob,feed_dict={fn.imgs:test.batch,fn.landmark_visibility:test.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7]})
+
 """
 """           
 fn1=fashionnet_1.FashionNet_1st()
