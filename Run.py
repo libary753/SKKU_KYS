@@ -21,12 +21,12 @@ class test:
     
     img=test.load_image('C:/Users/libar/Desktop/Landmark Prediction/img/img_00000001.jpg')
     """
-    def load_batch_for_landmark(self,batNum,batSize=50):
+    def load_batch_for_landmark(self,batNum,model_type,batSize=50):
         self.batSize=batSize
         self.batch = np.zeros((batSize,224,224,3),dtype=np.float32) # batch 초기화
     
         imgDir=('C:/Users/libar/Desktop/Attribute Prediction/')
-        self.setOutput_landmark(batNum,batSize)
+        self.setOutput_landmark(batNum,batSize,model_type)
         
         for i in range(batSize):
             imageFileName = imgDir+self.img_list[batNum*batSize+i]
@@ -111,9 +111,9 @@ class test:
     csv에서 파일 정보 읽어오기
     """
     
-    def readCsv_attribute(self,model):
+    def readCsv_attribute(self,model_type):
         csvList = []
-        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Anno_'+model+'.csv','r')
+        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Anno_'+model_type+'.csv','r')
         csvReader = csv.reader(f)
         for i in csvReader:          
             csvList.append(i)
@@ -128,9 +128,20 @@ class test:
         
         self.img_list=arr[:,0]
         self.category_list=arr[:,2]
-        self.visibility_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'),arr[:,22].astype('float32'),arr[:,25].astype('float32'))).T
-        self.x_list=np.vstack((arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'),arr[:,23].astype('float32'),arr[:,26].astype('float32'))).T
-        self.y_list=np.vstack((arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'),arr[:,21].astype('float32'),arr[:,24].astype('float32'),arr[:,27].astype('float32'))).T
+        if model_type is 'full':
+            self.visibility_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'),arr[:,22].astype('float32'),arr[:,25].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'),arr[:,23].astype('float32'),arr[:,26].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'),arr[:,21].astype('float32'),arr[:,24].astype('float32'),arr[:,27].astype('float32'))).T
+    
+        elif model_type is 'upper':
+            self.visibility_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'),arr[:,21].astype('float32'))).T
+    
+        else:
+            self.visibility_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'))).T
     
     def readCsv_landmark(self,model):
         csvList = []
@@ -153,11 +164,19 @@ class test:
         self.x_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'),arr[:,22].astype('float32'),arr[:,25].astype('float32'))).T
         self.y_list=np.vstack((arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'),arr[:,23].astype('float32'),arr[:,26].astype('float32'))).T
         
-    def setOutput_landmark(self,batNum,batSize):
+    def setOutput_landmark(self,batNum,batSize,model_type):
+        
+        if model_type is 'full':
+            num_of_points=8
+        elif model_type is 'upper':
+            num_of_points=6
+        else:
+            num_of_points=4
+            
         visibility_output=self.visibility_list[batSize*batNum:batSize*(batNum+1),:] 
-        visibility_prob=np.zeros((batSize,8,3))
+        visibility_prob=np.zeros((batSize,num_of_points,3))
         for i in range(batSize):
-            for j in range(8):
+            for j in range(num_of_points):
                 visibility_prob[i][j][int(self.visibility_list[batSize*batNum+i][j])]=1
         x_output=self.x_list[batSize*batNum:batSize*(batNum+1),:] 
         y_output=self.y_list[batSize*batNum:batSize*(batNum+1),:] 
@@ -177,53 +196,80 @@ class test:
         self.output=[category_output,category_prob]
         self.img_name=self.img_list[batSize*batNum:batSize*(batNum+1)]
     
-    def define_loss_landmark(self,fn,batSize):
-        self.output_vis = tf.placeholder(tf.float32, [batSize, 8])
-        self.output_vis_prob = tf.placeholder(tf.float32, [batSize,8,3])
-        self.output_x = tf.placeholder(tf.float32, [batSize, 8])
-        self.output_y = tf.placeholder(tf.float32, [batSize, 8])
+    def define_loss_landmark(self,fn,batSize,model_type):
         
-        self.loss_visibility_1=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,0,:], fn.out_visibility_1)
-        self.loss_visibility_2=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,1,:], fn.out_visibility_2)
-        self.loss_visibility_3=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,2,:], fn.out_visibility_3)
-        self.loss_visibility_4=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,3,:], fn.out_visibility_4)
-        self.loss_visibility_5=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,4,:], fn.out_visibility_5)
-        self.loss_visibility_6=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,5,:], fn.out_visibility_6)
-        self.loss_visibility_7=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,6,:], fn.out_visibility_7)
-        self.loss_visibility_8=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,7,:], fn.out_visibility_8)
-        
+        if model_type is 'full':
+            num_of_points=8
+        elif model_type is 'upper':
+            num_of_points=6
+        else:
+            num_of_points=4
+            
+        self.output_vis = tf.placeholder(tf.float32, [batSize, num_of_points])
+        self.output_vis_prob = tf.placeholder(tf.float32, [batSize,num_of_points,3])
+        self.output_x = tf.placeholder(tf.float32, [batSize, num_of_points])
+        self.output_y = tf.placeholder(tf.float32, [batSize, num_of_points])
+
         self.loss_landmark=tf.reduce_mean(tf.matmul(tf.sqrt(tf.square(self.output_x - fn.out_landmark_x)+tf.square(self.output_y - fn.out_landmark_y)),tf.transpose(self.output_vis)))
-        self.loss_visibility = self.loss_visibility_1+self.loss_visibility_2+self.loss_visibility_3+self.loss_visibility_4+self.loss_visibility_5+self.loss_visibility_6+self.loss_visibility_7+self.loss_visibility_8
+
+        if model_type is 'full':
+            self.loss_visibility_1=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,0,:], fn.out_visibility_1)
+            self.loss_visibility_2=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,1,:], fn.out_visibility_2)
+            self.loss_visibility_3=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,2,:], fn.out_visibility_3)
+            self.loss_visibility_4=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,3,:], fn.out_visibility_4)
+            self.loss_visibility_5=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,4,:], fn.out_visibility_5)
+            self.loss_visibility_6=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,5,:], fn.out_visibility_6)
+            self.loss_visibility_7=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,6,:], fn.out_visibility_7)
+            self.loss_visibility_8=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,7,:], fn.out_visibility_8)
+            self.loss_visibility = self.loss_visibility_1+self.loss_visibility_2+self.loss_visibility_3+self.loss_visibility_4+self.loss_visibility_5+self.loss_visibility_6+self.loss_visibility_7+self.loss_visibility_8
+        elif model_type is 'upper':
+            self.loss_visibility_1=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,0,:], fn.out_visibility_1)
+            self.loss_visibility_2=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,1,:], fn.out_visibility_2)
+            self.loss_visibility_3=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,2,:], fn.out_visibility_3)
+            self.loss_visibility_4=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,3,:], fn.out_visibility_4)
+            self.loss_visibility_5=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,4,:], fn.out_visibility_5)
+            self.loss_visibility_6=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,5,:], fn.out_visibility_6)
+            self.loss_visibility = self.loss_visibility_1+self.loss_visibility_2+self.loss_visibility_3+self.loss_visibility_4+self.loss_visibility_5+self.loss_visibility_6
+        else:
+            self.loss_visibility_1=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,0,:], fn.out_visibility_1)
+            self.loss_visibility_2=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,1,:], fn.out_visibility_2)
+            self.loss_visibility_3=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,2,:], fn.out_visibility_3)
+            self.loss_visibility_4=tf.losses.softmax_cross_entropy(self.output_vis_prob[:,3,:], fn.out_visibility_4)
+            self.loss_visibility = self.loss_visibility_1+self.loss_visibility_2+self.loss_visibility_3+self.loss_visibility_4
+        
     
     def define_loss_attribute(self,fn,batSize):
         self.output_category = tf.placeholder(tf.float32, [batSize, 50])
         self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
         
     def train_landmark(self):
-        test.readCsv_attribute('full')
+        test.readCsv_attribute('upper')
         fn=fashionnet_1.FashionNet_1st()
-        fn.build_net(Dropout=True)
-        batsize=25
-        self.define_loss_landmark(fn,batSize=batsize)
+        fn.build_net('upper',Dropout=True)
+        batsize=20
+        self.define_loss_landmark(fn,batsize,'upper')
         #loss weight: 처음에는 1:10, 나중에는 1:20
         #loss = self.loss_landmark+10*self.loss_visibility
         #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
-        learningRate = 0.000001
+        learningRate = 0.00001
+        #learningRate = 0.00001
+        #learningRate = 0.000001
         #10 epoch 이후에 5:1
-        loss = 5*self.loss_landmark + self.loss_visibility
+        loss = self.loss_landmark + self.loss_visibility
+        #loss = 5*self.loss_landmark + self.loss_visibility
         
         train = tf.train.AdamOptimizer(learningRate).minimize(loss)
         
         
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
-        fn.restore_model(sess,'C:/Users/libar/Desktop/save_full/10 epoch/final/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/save_upper/5 epoch/final/model') 
         print('--------------------------------------------------------------')                
                 
-        for j in range(11,21):
-            self.readCsv_attribute('full')
-            for i in range(2620):
-                self.load_batch_for_landmark(i,batsize)
+        for j in range(5,11):
+            self.readCsv_attribute('upper')
+            for i in range(5049):
+                self.load_batch_for_landmark(i,'upper',batsize)
                 
                 sess.run([train],feed_dict={fn.img:self.batch,fn.keep_prob:0.5,self.output_vis:self.output[0]%2,self.output_vis_prob:self.output[1],self.output_x:self.output[2],self.output_y:self.output[3]})
                 if i%50 is 0:
@@ -236,9 +282,9 @@ class test:
                     print(test.output[2][0])
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
-                        fn.save_model(sess,'C:/Users/libar/Desktop/save_full/'+str(j)+' epoch/'+str(i)+'/model')
+                        fn.save_model(sess,'C:/Users/libar/Desktop/save_upper/'+str(j)+' epoch/'+str(i)+'/model')
                         
-            fn.save_model(sess,'C:/Users/libar/Desktop/save_full/'+str(j)+' epoch/final/model')
+            fn.save_model(sess,'C:/Users/libar/Desktop/save_upper/'+str(j)+' epoch/final/model')
     
     def train_attribute(self):
         test.readCsv_attribute('full')
@@ -277,7 +323,7 @@ class test:
             fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/final/model')
             
 test=test()
-test.train_attribute()
+test.train_landmark()
 """
 test=test()
 test.readCsv_attribute('full')

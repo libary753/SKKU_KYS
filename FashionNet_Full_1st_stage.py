@@ -45,7 +45,7 @@ class FashionNet_1st:
     CNN
     """
     
-    def build_net(self,Dropout=False):
+    def build_net(self,model_type,Dropout=False):
         
         """
         keep_prob for dropout
@@ -89,36 +89,53 @@ class FashionNet_1st:
         """
         fc Layer
         """
-        
+            
         shape = int(np.prod(self.pool_5.get_shape()[1:]))
         self.pool_5_flat = tf.reshape(self.pool_5, [-1, shape])        
         self.fc_1=self.fc_layer(self.pool_5_flat,shape,4096,fcSt,fcB,'fc_1',dropout=Dropout)
         self.fc_2 = self.fc_layer(self.fc_1,4096,4096,fcSt,fcB,'fc_2',dropout=Dropout)
+        
         self.fc_3_visibility_1 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_1',relu=False)
         self.fc_3_visibility_2 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_2',relu=False)
         self.fc_3_visibility_3 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_3',relu=False)
         self.fc_3_visibility_4 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_4',relu=False)
-        self.fc_3_visibility_5 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_5',relu=False)
-        self.fc_3_visibility_6 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_6',relu=False)
-        self.fc_3_visibility_7 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_7',relu=False)
-        self.fc_3_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
         self.out_visibility_1=tf.nn.softmax(self.fc_3_visibility_1)
         self.out_visibility_2=tf.nn.softmax(self.fc_3_visibility_2)
         self.out_visibility_3=tf.nn.softmax(self.fc_3_visibility_3)
         self.out_visibility_4=tf.nn.softmax(self.fc_3_visibility_4)
-        self.out_visibility_5=tf.nn.softmax(self.fc_3_visibility_5)
-        self.out_visibility_6=tf.nn.softmax(self.fc_3_visibility_6)
-        self.out_visibility_7=tf.nn.softmax(self.fc_3_visibility_7)
-        self.out_visibility_8=tf.nn.softmax(self.fc_3_visibility_8)
+        
+        if model_type is 'full' or model_type is 'upper':
+            self.fc_3_visibility_5 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_5',relu=False)
+            self.fc_3_visibility_6 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_6',relu=False)
+            self.out_visibility_5=tf.nn.softmax(self.fc_3_visibility_5)
+            self.out_visibility_6=tf.nn.softmax(self.fc_3_visibility_6)
+            
+        if model_type is 'full':
+            self.fc_3_visibility_7 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_7',relu=False)
+            self.fc_3_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
+            self.out_visibility_7=tf.nn.softmax(self.fc_3_visibility_7)
+            self.out_visibility_8=tf.nn.softmax(self.fc_3_visibility_8)
 
 
         
-        self.out_landmark_x =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
-        self.out_landmark_y =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
-        self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6,self.fc_3_visibility_7,self.fc_3_visibility_8],0)
-        #수정필요함
-        self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8]
-      
+        if model_type is 'full':
+            self.out_landmark_x =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
+            self.out_landmark_y =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
+            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6,self.fc_3_visibility_7,self.fc_3_visibility_8],0)
+            self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8]
+        elif model_type is 'upper':
+            self.out_landmark_x =self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'out_landmark',relu=False)
+            self.out_landmark_y =self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'out_landmark',relu=False)
+            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6],0)
+            self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6]
+        
+        else:
+            self.out_landmark_x =self.fc_layer(self.fc_2,4096,4,fcSt,fcB,'out_landmark',relu=False)
+            self.out_landmark_y =self.fc_layer(self.fc_2,4096,4,fcSt,fcB,'out_landmark',relu=False)
+            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4],0)
+            self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4]
+            
+        
     #save model
     def save_model(self,sess,path):
         self.saver = tf.train.Saver(self.param)
@@ -129,8 +146,7 @@ class FashionNet_1st:
     def restore_model(self,sess,path):
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver(self.param)
-        saver.restore(sess,path)
-        
+        saver.restore(sess,path)        
     #restore vgg model
     #fn.restore_vgg(sess,'C:/Users/libar/Desktop/save_full/vgg16/model')
     def restore_vgg(self,sess,path):
