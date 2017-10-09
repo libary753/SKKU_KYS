@@ -144,13 +144,12 @@ class FashionNet_2nd:
         self.fc_1_global=self.fc_layer(self.pool_global_flat,shape_global,4096,fcSt,fcB,'fc_1_global',dropout=Dropout)
         self.fc_1=tf.concat([self.fc_1_landmark,self.fc_1_global],1)
         self.fc_2 = self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout)
-        self.fc_3_category =self.fc_layer(self.fc_2,4096,50,fcSt,fcB,'out_visibility_2',relu=False)
-        #self.fc_3_attribute =self.fc_layer(self.fc_2,4096,1000,fcSt,fcB,'out_visibility_3',relu=False)
-        #self.out_triplet =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_1',relu=False)
-        self.out_category_prob=tf.nn.softmax(self.fc_3_category)
-
-
-    
+        self.fc_3_category = self.fc_layer(self.fc_2,4096,50,fcSt,fcB,'out_visibility_2',relu=False)
+        self.fc_3_attribute = tf.reshape(self.fc_layer(self.fc_2,4096,2000,fcSt,fcB,'out_visibility_3',relu=False),[1000,2])
+        
+        self.out_category_prob=tf.nn.softmax(self.fc_3_category)        
+        self.out_attribute_prob=tf.nn.softmax(self.fc_3_attribute)
+                   
     #save model
     def save_model(self,sess,path):
         self.saver = tf.train.Saver(self.param)

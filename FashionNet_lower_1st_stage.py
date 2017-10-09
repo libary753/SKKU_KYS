@@ -109,6 +109,9 @@ class FashionNet:
         self.out_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
 
         self.out = tf.concat([self.out_softlabel,self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8],1)
+
+    def cal_triplet(self,batsize,anch,pos,neg):
+        feature_anch = np.zeros((batSize,20,4096),dtype=np.float32)
     
     #save model
     def save_model(self,sess,path):
