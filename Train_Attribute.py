@@ -34,13 +34,14 @@ class trainer:
         self.setOutput_attribute(batNum,batSize)
         
         for i in range(batSize):
-            imageFileName = imgDir+self.img_list[batNum*batSize+i]
+            imageFileName = imgDir+self.imgList[batNum*batSize+i]
             img = Image.open(imageFileName)
             self.landmark_x[i]=self.landmark_x[i]/img.size[0]-0.5
             self.landmark_y[i]=self.landmark_y[i]/img.size[1]-0.5
             img = self.norm_image(img)
             self.batch[i]=img
-    
+            
+        self.find_pn(batSize)
     
     def load_image(self,path):
         self.batch = np.zeros((1,224,224,3),dtype=np.float32) # batch 초기화
@@ -133,35 +134,85 @@ class trainer:
         f.close()
             
     def setOutput_attribute(self,batNum,batSize):
-        category_output=self.category_list[batSize*batNum:batSize*(batNum+1)]
-        category_prob=np.zeros((batSize,50))
-        for i in range(batSize):
-            category_prob[i][int(self.category_list[batSize*batNum+i])-1]=1
+        self.cat_prob=np.zeros((batSize,50))
+        self.cat_output=np.zeros((batSize))
+        self.attr_prob=np.zeros((batSize,1000,3))
+        self.attr_output=np.zeros((batSize,1000))
+        self.img_name=[]
+        
+        
         
         self.landmark_v=self.visibility_list[batSize*batNum:batSize*(batNum+1),:]%2
         self.landmark_x=self.x_list[batSize*batNum:batSize*(batNum+1),:] 
         self.landmark_y=self.y_list[batSize*batNum:batSize*(batNum+1),:]
+        
+        for i in range(batSize):
+            self.cat_output[i] = self.catList[int(tr.landList[batSize*batNum+i][0])]
+            self.cat_prob[i][int(self.cat_output[i])-1]=1
+            self.attr_output[i]=list(map(int,tr.attrList[int(tr.landList[batSize*batNum+i][0])].split(' ')))
+            self.img_name+=[self.imgList[int(tr.landList[batSize*batNum+i][0])]]
+            for j in range(1000):
+                self.attr_prob[i][j][int(self.attr_output[i][j])+1]=1
+                
+         
+        self.output=[self.cat_output,self.cat_prob,self.attr_prob]
+        
+        """
+        self.landmark_v=self.visibility_list[batSize*batNum:batSize*(batNum+1),:]%2
+        self.landmark_x=self.x_list[batSize*batNum:batSize*(batNum+1),:] 
+        self.landmark_y=self.y_list[batSize*batNum:batSize*(batNum+1),:]
         self.output=[category_output,category_prob]
-        self.img_name=self.img_list[batSize*batNum:batSize*(batNum+1)]
-    
+        self.img_name=self.imgList[batSize*batNum:batSize*(batNum+1)]
+        """
     def define_loss_attribute(self,fn,batSize=20,margin=0.01):
+        #category cross entropy loss
         self.output_category = tf.placeholder(tf.float32, [batSize, 50])
-        self.feature = tf.placeholder(tf.float32, [batSize, 4096])
+        self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
+        
+        #attribute cross entropy loss
+        self.output_attribute = tf.placeholder(tf.float32, [batSize, 1000, 3])
+        self.loss_attribute = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
+        
+        #triplet loss
         self.pos = tf.placeholder(tf.int32, [batSize])
         self.neg = tf.placeholder(tf.int32, [batSize])
-        self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
 
-        feature_pos = tf.gather(self.feature,self.pos)
-        feature_neg = tf.gather(self.feature,self.neg)
+        feature_pos = tf.gather(fn.fc_2,self.pos)
+        feature_neg = tf.gather(fn.fc_2,self.neg)
         
-        pos = self.sqr_dist(fn.fc_2, feature_pos)
-        neg = self.sqr_dist(fn.fc_2, feature_neg)
+        self.p = self.sqr_dist(fn.fc_2, feature_pos)
+        self.n = self.sqr_dist(fn.fc_2, feature_neg)
         
-        self.loss_triplet = pos-neg+margin
+        self.loss_triplet = tf.maximum(0.,self.p-self.n+margin)
         
+        w_cat = 1
+        w_att = 1
+        w_tri = 1
+        
+        self.loss = w_cat * self.loss_category + w_att * self.loss_attribute + w_tri * self.loss_triplet 
+
                     
     def sqr_dist(self,p1,p2): 
         return tf.reduce_sum(tf.square(tf.subtract(p1, p2)))
+    
+    def dist(self,p1,p2):
+        return np.sqrt(np.sum(np.square(p1-p2)))
+    
+    def find_pn(self,batsize):
+        self.dist_map = np.zeros((batsize,batsize),dtype=np.float32)
+        
+        for i in range(batsize):
+            for j in range(batsize):
+                self.dist_map[i][j] = self.dist(self.attr_prob[i],self.attr_prob[j])
+                if self.cat_output[i] is self.cat_output[j]:
+                    self.dist_map[i][j] = self.dist_map[i][j]-5 #category가 같으면 거리에서 5을 빼줌
+                if i is j:
+                    self.dist_map[i][j] = 1000
+        
+        self.pos_feed=np.argmin(self.dist_map,0)
+        self.neg_feed=np.argmax(self.dist_map,0)
+            
+    
     
     def train_attribute(self):
         self.readCsv_attribute('full')
@@ -171,9 +222,8 @@ class trainer:
         self.define_loss_attribute(fn,batSize=batsize)
         #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
         learningRate = 0.0001
-        loss = self.loss_category
         
-        train = tf.train.AdamOptimizer(learningRate).minimize(loss)
+        train = tf.train.AdamOptimizer(learningRate).minimize(self.loss)
         
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
@@ -186,10 +236,10 @@ class trainer:
                 self.load_batch_for_attribute(i,batsize)
                 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:self.batch})
                 fn.get_roi(self.landmark_x,self.landmark_y,conv_4,batsize)
-                feature = sess.run(fn.fc_2,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.output[1],fn.keep_prob:0.5})
-                sess.run(train,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.output[1]fn.keep_prob:0.5})
+                feature = sess.run(fn.fc_2,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.keep_prob:0.5})
+                sess.run(train,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,self.output_attribute:self.attr_prob,fn.keep_prob:0.5})
                 if i%50 is 0:
-                    [l1,out]=sess.run([loss,fn.out_category_prob],feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.output[1],fn.keep_prob:0.5})
+                    [l1,out]=sess.run([self.loss,fn.out_category_prob],feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,self.pos:self.pos_feed,self.neg:self.neg_feed,fn.keep_prob:0.5})
                     print('< ',str(j),' epoch, ',str(i),'번째 batch >')
                     print('loss: ',l1)
                     print(self.output[0])
@@ -202,8 +252,21 @@ class trainer:
             
             
  
-        
+
 fn=FashionNet.FashionNet_2nd()
 tr = trainer()
 fn.build_net()
+tr.readCsv_attribute('full')
+tr.load_batch_for_attribute(0,20)
 tr.define_loss_attribute(fn)
+
+
+batsize=20
+sess=tf.Session()
+sess.run(tf.global_variables_initializer())
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:tr.batch})
+fn.get_roi(tr.landmark_x,tr.landmark_y,conv_4,batsize)
+feature = sess.run(fn.fc_2,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
+triplet_loss=sess.run(tr.loss_triplet,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
+print(triplet_loss)
