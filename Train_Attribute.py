@@ -180,10 +180,10 @@ class trainer:
         feature_pos = tf.gather(fn.fc_2,self.pos)
         feature_neg = tf.gather(fn.fc_2,self.neg)
         
-        self.p = self.sqr_dist(fn.fc_2, feature_pos)
-        self.n = self.sqr_dist(fn.fc_2, feature_neg)
+        self.p = self.sqrt_dist(fn.fc_2, feature_pos)
+        self.n = self.sqrt_dist(fn.fc_2, feature_neg)
         
-        self.loss_triplet = tf.maximum(0.,self.p-self.n+margin)
+        self.loss_triplet = tf.reduce_sum(tf.maximum(0.,self.p-self.n+margin))
         
         w_cat = 1
         w_att = 1
@@ -192,8 +192,8 @@ class trainer:
         self.loss = w_cat * self.loss_category + w_att * self.loss_attribute + w_tri * self.loss_triplet 
 
                     
-    def sqr_dist(self,p1,p2): 
-        return tf.reduce_sum(tf.square(tf.subtract(p1, p2)))
+    def sqrt_dist(self,p1,p2): 
+        return tf.sqrt(tf.reduce_sum(tf.square(tf.subtract(p1, p2)),1))
     
     def dist(self,p1,p2):
         return np.sqrt(np.sum(np.square(p1-p2)))
@@ -207,10 +207,18 @@ class trainer:
                 if self.cat_output[i] is self.cat_output[j]:
                     self.dist_map[i][j] = self.dist_map[i][j]-5 #category가 같으면 거리에서 5을 빼줌
                 if i is j:
-                    self.dist_map[i][j] = 1000
+                    self.dist_map[i][j] = 0
+        
+        self.neg_feed=np.argmax(self.dist_map,0)
+        
+        for i in range(batsize):
+            self.dist_map[i][i] = np.finfo(np.float32).max
         
         self.pos_feed=np.argmin(self.dist_map,0)
-        self.neg_feed=np.argmax(self.dist_map,0)
+        
+        
+        
+        
             
     
     
@@ -220,39 +228,41 @@ class trainer:
         fn.build_net(Dropout=True)
         batsize=20
         self.define_loss_attribute(fn,batSize=batsize)
-        #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
+        #learningRate= 0.0001(3 epoch까지) 0.00001(그 다음 5 epoch)
         learningRate = 0.0001
         
         train = tf.train.AdamOptimizer(learningRate).minimize(self.loss)
         
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
-        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+        #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/5 epoch/final/model') 
         print('--------------------------------------------------------------')                
                 
-        for j in range(1,6):
+        for j in range(6,11):
             self.readCsv_attribute('full')
             for i in range(2620):
                 self.load_batch_for_attribute(i,batsize)
                 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:self.batch})
                 fn.get_roi(self.landmark_x,self.landmark_y,conv_4,batsize)
                 feature = sess.run(fn.fc_2,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.keep_prob:0.5})
-                sess.run(train,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,self.output_attribute:self.attr_prob,fn.keep_prob:0.5})
+                sess.run(train,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
                 if i%50 is 0:
                     [l1,out]=sess.run([self.loss,fn.out_category_prob],feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,self.pos:self.pos_feed,self.neg:self.neg_feed,fn.keep_prob:0.5})
                     print('< ',str(j),' epoch, ',str(i),'번째 batch >')
-                    print('loss: ',l1)
-                    print(self.output[0])
-                    print(out[0])
+                    triplet_loss=sess.run(tr.loss_triplet,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
+                    print('triplet_loss: ',triplet_loss)
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
                         fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/'+str(i)+'/model')
                         
             fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/final/model')
             
-            
- 
 
+"""
+tr = trainer();        
+tr.train_attribute();
+"""
 fn=FashionNet.FashionNet_2nd()
 tr = trainer()
 fn.build_net()
@@ -264,7 +274,7 @@ tr.define_loss_attribute(fn)
 batsize=20
 sess=tf.Session()
 sess.run(tf.global_variables_initializer())
-fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/10 epoch/final/model') 
 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:tr.batch})
 fn.get_roi(tr.landmark_x,tr.landmark_y,conv_4,batsize)
 feature = sess.run(fn.fc_2,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})

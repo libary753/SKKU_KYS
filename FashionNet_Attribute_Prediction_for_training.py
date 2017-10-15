@@ -144,6 +144,7 @@ class FashionNet_2nd:
         self.fc_1_global=self.fc_layer(self.pool_global_flat,shape_global,4096,fcSt,fcB,'fc_1_global',dropout=Dropout)
         self.fc_1=tf.concat([self.fc_1_landmark,self.fc_1_global],1)
         self.fc_2 = self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout)
+        #self.fc_2 = tf.nn.l2_normalize(self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout))
         self.fc_3_category = self.fc_layer(self.fc_2,4096,50,fcSt,fcB,'out_visibility_2',relu=False)
         self.fc_3_attribute = tf.reshape(self.fc_layer(self.fc_2,4096,3000,fcSt,fcB,'out_visibility_3',relu=False),[tf.shape(self.fc_2)[0],1000,3])
         
