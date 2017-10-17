@@ -171,7 +171,8 @@ class trainer:
         
         #attribute cross entropy loss
         self.output_attribute = tf.placeholder(tf.float32, [batSize, 1000, 3])
-        self.loss_attribute = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
+        self.loss_attribute = tf.losses.softmax_cross_entropy(self.output_attribute,fn.out_attribute_prob)
+        
         
         #triplet loss
         self.pos = tf.placeholder(tf.int32, [batSize])
@@ -186,8 +187,8 @@ class trainer:
         self.loss_triplet = tf.reduce_sum(tf.maximum(0.,self.p-self.n+margin))
         
         w_cat = 1
-        w_att = 1
-        w_tri = 1
+        w_att = 0
+        w_tri = 0
         
         self.loss = w_cat * self.loss_category + w_att * self.loss_attribute + w_tri * self.loss_triplet 
 
@@ -229,37 +230,37 @@ class trainer:
         batsize=20
         self.define_loss_attribute(fn,batSize=batsize)
         #learningRate= 0.0001(3 epoch까지) 0.00001(그 다음 5 epoch)
-        learningRate = 0.0001
+        learningRate = 0.00001
         
         train = tf.train.AdamOptimizer(learningRate).minimize(self.loss)
         
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
-        #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
-        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/5 epoch/final/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+        #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/4 epoch/final/model') 
         print('--------------------------------------------------------------')                
                 
-        for j in range(6,11):
+        for j in range(1,5):
             self.readCsv_attribute('full')
             for i in range(2620):
                 self.load_batch_for_attribute(i,batsize)
                 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:self.batch})
                 fn.get_roi(self.landmark_x,self.landmark_y,conv_4,batsize)
-                feature = sess.run(fn.fc_2,feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.keep_prob:0.5})
-                sess.run(train,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
+                sess.run(train,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.output_attribute:tr.attr_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
                 if i%50 is 0:
-                    [l1,out]=sess.run([self.loss,fn.out_category_prob],feed_dict={fn.imgs:self.batch,fn.landmark_visibility:self.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,self.pos:self.pos_feed,self.neg:self.neg_feed,fn.keep_prob:0.5})
                     print('< ',str(j),' epoch, ',str(i),'번째 batch >')
-                    triplet_loss=sess.run(tr.loss_triplet,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
+                    [triplet_loss,cat,cat_loss,att_loss]=sess.run([tr.loss_triplet,fn.out_category_prob,self.loss_category,self.loss_attribute],feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.output_attribute:tr.attr_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
                     print('triplet_loss: ',triplet_loss)
+                    print('cat_loss: ',cat_loss)
+                    print('att_loss: ',att_loss)
+                    print('cat: ',np.argmax(cat,1)+1)
+                    print('ground_truth: ',self.cat_output)
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
                         fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/'+str(i)+'/model')
                         
             fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/final/model')
-            
 
-"""
 tr = trainer();        
 tr.train_attribute();
 """
@@ -279,4 +280,6 @@ conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:tr.batch})
 fn.get_roi(tr.landmark_x,tr.landmark_y,conv_4,batsize)
 feature = sess.run(fn.fc_2,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
 triplet_loss=sess.run(tr.loss_triplet,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
-print(triplet_loss)
+print(triplet_loss)            
+
+"""
