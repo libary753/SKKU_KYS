@@ -17,8 +17,7 @@ class trainer:
         self.imgList=[]
         self.catList=[]
         self.attrList=[]
-        self.batSize=50
-
+        
     """
     image 로딩, 리사이징
     output 로딩
@@ -80,9 +79,9 @@ class trainer:
     csv에서 파일 정보 읽어오기
     """
     
-    def readCsv_attribute(self,model_type):
+    def readCsv_attribute(self):
         self.landList=[]
-        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Final/Land_'+model_type+'.csv','r')
+        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Final/Land_'+self.model_type+'.csv','r')
         csvReader = csv.reader(f)
         for i in csvReader:          
             self.landList.append(i)
@@ -97,17 +96,17 @@ class trainer:
                     if len(arr[i][j]) is 0:
                         arr[i][j]='0'
         
-        if model_type is 'full':
+        if self.model_type is 'full':
             self.visibility_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'),arr[:,23].astype('float32'))).T
             self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'),arr[:,21].astype('float32'),arr[:,24].astype('float32'))).T
             self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'),arr[:,22].astype('float32'),arr[:,25].astype('float32'))).T
             
-        elif model_type is 'upper':
+        elif self.model_type is 'upper':
             self.visibility_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'))).T
             self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'))).T
             self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'))).T
             
-        else:
+        elif self.model_type is 'lower':
             self.visibility_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'))).T
             self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'))).T
             self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'))).T
@@ -134,9 +133,17 @@ class trainer:
         f.close()
             
     def setOutput_attribute(self,batNum,batSize):
-        self.cat_prob=np.zeros((batSize,50))
+        if self.model_type is 'full':
+            self.cat_prob=np.zeros((batSize,10))
+            
+        elif self.model_type is 'upper':
+            self.cat_prob=np.zeros((batSize,20))
+            
+        elif self.model_type is 'lower':
+            self.cat_prob=np.zeros((batSize,16))
+            
         self.cat_output=np.zeros((batSize))
-        self.attr_prob=np.zeros((batSize,1000,3))
+        self.attr_prob=np.zeros((batSize,1000,2))
         self.attr_output=np.zeros((batSize,1000))
         self.img_name=[]
         
@@ -148,11 +155,24 @@ class trainer:
         
         for i in range(batSize):
             self.cat_output[i] = self.catList[int(tr.landList[batSize*batNum+i][0])]
-            self.cat_prob[i][int(self.cat_output[i])-1]=1
+            
+            if self.model_type is 'full':
+                index = int(self.cat_output[i])-37
+                if(index>0): index = index-1
+                if(index>6): index = index-1
+                
+                self.cat_prob[i][index]=1
+                
+            elif self.model_type is 'upper':
+                self.cat_prob[i][int(self.cat_output[i])-21]=1
+                
+            elif self.model_type is 'lower':
+                self.cat_prob[i][int(self.cat_output[i])-1]=1
+            
             self.attr_output[i]=list(map(int,tr.attrList[int(tr.landList[batSize*batNum+i][0])].split(' ')))
             self.img_name+=[self.imgList[int(tr.landList[batSize*batNum+i][0])]]
             for j in range(1000):
-                self.attr_prob[i][j][int(self.attr_output[i][j])+1]=1
+                self.attr_prob[i][j][int(((self.attr_output[i][j])+1)/2)]=1
                 
          
         self.output=[self.cat_output,self.cat_prob,self.attr_prob]
@@ -166,13 +186,27 @@ class trainer:
         """
     def define_loss_attribute(self,fn,batSize=20,margin=0.01):
         #category cross entropy loss
-        self.output_category = tf.placeholder(tf.float32, [batSize, 50])
-        self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
+        
+        if self.model_type is 'full':
+            self.output_category = tf.placeholder(tf.float32, [batSize, 10])
+            
+        elif self.model_type is 'upper':
+            self.output_category = tf.placeholder(tf.float32, [batSize, 20])
+            
+        elif self.model_type is 'lower':
+            self.output_category = tf.placeholder(tf.float32, [batSize, 16])
+            
+
+        #self.loss_category = tf.losses.softmax_cross_entropy(self.output_category,fn.out_category_prob)
+        self.loss_category = tf.reduce_mean(-tf.reduce_sum(tf.matmul(tr.output_category * tf.log(fn.out_category_prob),tr.cat_weight.T), reduction_indices=1))
         
         #attribute cross entropy loss
-        self.output_attribute = tf.placeholder(tf.float32, [batSize, 1000, 3])
-        self.loss_attribute = tf.losses.softmax_cross_entropy(self.output_attribute,fn.out_attribute_prob)
+        self.output_attribute = tf.placeholder(tf.float32, [batSize, 1000, 2])
+        #self.loss_attribute = tf.losses.softmax_cross_entropy(self.output_attribute,fn.out_attribute_prob)
         
+        #weighted cross entropy
+        
+        self.loss_attribute =  tf.reduce_mean(-tf.reduce_sum(self.output_attribute * tf.log(fn.out_attribute_prob), reduction_indices=1))
         
         #triplet loss
         self.pos = tf.placeholder(tf.int32, [batSize])
@@ -186,9 +220,9 @@ class trainer:
         
         self.loss_triplet = tf.reduce_sum(tf.maximum(0.,self.p-self.n+margin))
         
-        w_cat = 1
+        w_cat = 0.1
         w_att = 0
-        w_tri = 0
+        w_tri = 1
         
         self.loss = w_cat * self.loss_category + w_att * self.loss_attribute + w_tri * self.loss_triplet 
 
@@ -219,29 +253,51 @@ class trainer:
         
         
         
+    def defineWeight(self,batSize):
+        cat_weight_upper = [0.056281866,0.001259265,0.000383625,0.029738453,0.028025127,0.000708943,0.030402258,0.619100527,0.01307122,0.002340243,0.00090224,0.012753007,0.013869869,0.108096917,0.011761841,0.000715573,0.000607828,0.00025551,0.000936741,0.068788947]
+        cat_weight_lower = [0.118823454,0.018109457,0.018866119,0.005754407,0.193512482,0.001321291,0.015288797,0.211654277,0.002077588,0.00189665,0.37627427,0.000477135,0.000627472,0.003045385,0.008672134,0.023599083]
+        cat_weight_full = [0.180549953,0.004458024,0.527761402,0.000131591,0.00153694,0.070009166,0.004191141,0.145976558,0.064120544,0.001264682]
+        row=[]
         
+        if self.model_type is 'full':
+            self.cat_weight = np.zeros(shape=[batSize,10],dtype=np.float32)
+            row = cat_weight_full
+            
+        elif self.model_type is 'upper':
+            self.cat_weight = np.zeros(shape=[batSize,20],dtype=np.float32)
+            row = cat_weight_upper
+            
+        elif self.model_type is 'lower':
+            self.cat_weight = np.zeros(shape=[batSize,16],dtype=np.float32)
+            row = cat_weight_lower
+            
+        for i in range(batSize):
+            self.cat_weight[i] = row
+                
             
     
     
     def train_attribute(self):
-        self.readCsv_attribute('full')
+        self.model_type='full'
+        self.readCsv_attribute()
         fn=FashionNet.FashionNet_2nd()
-        fn.build_net(Dropout=True)
+        fn.build_net(model_type=self.model_type,Dropout=True)
         batsize=20
+        self.defineWeight(batsize)
         self.define_loss_attribute(fn,batSize=batsize)
         #learningRate= 0.0001(3 epoch까지) 0.00001(그 다음 5 epoch)
-        learningRate = 0.00001
+        learningRate = 0.000001
         
         train = tf.train.AdamOptimizer(learningRate).minimize(self.loss)
         
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
-        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
-        #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/4 epoch/final/model') 
+        #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/4 epoch/final/model') 
         print('--------------------------------------------------------------')                
                 
-        for j in range(1,5):
-            self.readCsv_attribute('full')
+        for j in range(5,15):
+            self.readCsv_attribute()
             for i in range(2620):
                 self.load_batch_for_attribute(i,batsize)
                 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:self.batch})
@@ -253,8 +309,8 @@ class trainer:
                     print('triplet_loss: ',triplet_loss)
                     print('cat_loss: ',cat_loss)
                     print('att_loss: ',att_loss)
-                    print('cat: ',np.argmax(cat,1)+1)
-                    print('ground_truth: ',self.cat_output)
+                    print('cat: ',np.argmax(cat,1))
+                    print('ground_truth: ',np.array(self.cat_output,dtype=np.int32))
                     print('--------------------------------------------------------------')
                     if i%400 is 0:
                         fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/'+str(j)+' epoch/'+str(i)+'/model')
@@ -266,20 +322,23 @@ tr.train_attribute();
 """
 fn=FashionNet.FashionNet_2nd()
 tr = trainer()
-fn.build_net()
-tr.readCsv_attribute('full')
+fn.build_net('full')
+tr.model_type='full'
+tr.readCsv_attribute()
+batsize=20
+tr.batSize=20;
 tr.load_batch_for_attribute(0,20)
+tr.defineWeight(batsize)
 tr.define_loss_attribute(fn)
 
 
-batsize=20
 sess=tf.Session()
 sess.run(tf.global_variables_initializer())
-fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/10 epoch/final/model') 
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/2 epoch/final/model') 
 conv_4=sess.run(fn.conv_4_3,feed_dict={fn.imgs:tr.batch})
+tr.defineWeight(batsize)
 fn.get_roi(tr.landmark_x,tr.landmark_y,conv_4,batsize)
 feature = sess.run(fn.fc_2,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
 triplet_loss=sess.run(tr.loss_triplet,feed_dict={fn.imgs:tr.batch,fn.landmark_visibility:tr.landmark_v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,tr.pos:tr.pos_feed,tr.neg:tr.neg_feed,fn.keep_prob:0.5})
-print(triplet_loss)            
-
+print(triplet_loss)    
 """

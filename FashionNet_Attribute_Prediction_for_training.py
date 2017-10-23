@@ -74,7 +74,7 @@ class FashionNet_2nd:
     CNN
     """
     
-    def build_net(self,Dropout=False):
+    def build_net(self,model_type,Dropout=False):
         
         """
         keep_prob for dropout
@@ -145,8 +145,15 @@ class FashionNet_2nd:
         self.fc_1=tf.concat([tf.nn.l2_normalize(self.fc_1_landmark,1),tf.nn.l2_normalize(self.fc_1_global,1)],1)
         #self.fc_2 = self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout,relu=False)
         self.fc_2 = tf.nn.l2_normalize(self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout),1)
-        self.fc_3_category = self.fc_layer(self.fc_2,4096,50,fcSt,fcB,'out_visibility_2',relu=False)
-        self.fc_3_attribute = tf.reshape(self.fc_layer(self.fc_2,4096,3000,fcSt,fcB,'out_visibility_3',relu=False),[tf.shape(self.fc_2)[0],1000,3])
+        if model_type is 'full':
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,10,fcSt,fcB,'fc_3_category',relu=False)
+            
+        elif model_type is 'upper':
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,20,fcSt,fcB,'fc_3_category',relu=False)
+            
+        elif model_type is 'lower':
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,16,fcSt,fcB,'fc_3_category',relu=False)
+        self.fc_3_attribute = tf.reshape(self.fc_layer(self.fc_2,4096,2000,fcSt,fcB,'fc_3_attribute',relu=False),[tf.shape(self.fc_2)[0],1000,2])
         
         self.out_category_prob=tf.nn.softmax(self.fc_3_category)        
         self.out_attribute_prob=tf.nn.softmax(self.fc_3_attribute)
