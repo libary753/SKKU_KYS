@@ -4,20 +4,22 @@ import numpy as np
 from PIL import Image
 
 
-class FashionNet_2nd:
-    def __init__(self):
+class FashionNet:
+    def __init__(self,model_type):
+        self.model_type=model_type
         self.RGB_MEAN = np.array([[ 102.9801, 115.9465, 122.7717]],dtype=np.float32)
-        self.imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
-        self.landmark_visibility = tf.placeholder(tf.float32,[None,8])
-        self.landmark_1= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_2= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_3= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_4= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_5= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_6= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_7= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        self.landmark_8= tf.placeholder(tf.float32, [None, 3, 3, 512])
-        
+        self.img = tf.placeholder(tf.float32, [None, 224, 224, 3])
+        if self.model_type is 'full':
+            self.numOfPoint = 8    
+            self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
+        elif self.model_type is 'upper':
+            self.numOfPoint = 6
+            self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
+        elif model_type is 'lower':
+            self.numOfPoint = 4
+            self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
+            
+        self.landmark_visibility = tf.placeholder(tf.float32,[None,self.numOfPoint])
         self.param=[]
         self.out=[]
     
@@ -50,24 +52,119 @@ class FashionNet_2nd:
             return out
     
             
-    def get_roi(self,landmark_x,landmark_y,conv_4,batSize):
-        self.landmark_roi=np.zeros((batSize,8,3,3,512),dtype=np.float32)
-        for i in range(batSize):
-            roi_concat = np.zeros((8,3,3,512),dtype=np.float32)
-            for j in range(8):
-                x=int((landmark_x[i][j]+0.5)*28)
-                y=int((landmark_y[i][j]+0.5)*28)
+    def get_roi(self,l_x,l_y,v,conv_4,batSize,model_type):
+        if model_type is 'full':
+            roi_list=[]
+            
+            for i in range(batSize):
+                roi_1 = self.roi_pooling_2point(l_x[0],l_x[1],l_y[0],l_y[1],conv_4,i)
+                roi_2 = self.roi_pooling_2point(l_x[0],l_x[2],l_y[0],l_y[2],conv_4,i)
+                roi_3 = self.roi_pooling_2point(l_x[1],l_x[3],l_y[1],l_y[3],conv_4,i)
+                roi_4 = self.roi_pooling_2point(l_x[4],l_x[5],l_y[4],l_y[5],conv_4,i)
+                roi_5 = self.roi_pooling_2point(l_x[6],l_x[7],l_y[6],l_y[7],conv_4,i)
+                roi_6 = self.roi_pooling_2point(l_x[4],l_x[7],l_y[4],l_y[7],conv_4,i)
+                roi_7 = self.roi_pooling_2point(l_x[5],l_x[6],l_y[5],l_y[6],conv_4,i)
+                roi_8 = self.roi_pooling_4point(l_x[0],l_x[1],l_y[4],l_y[5],l_x[0],l_x[1],l_y[4],l_y[5],conv_4,i)
                 
-                x=max(1,x)
-                x=min(26,x)
-                y=max(1,x)
-                y=min(26,x)
+                roi = tf.pack([roi_1,roi_2,roi_3,roi_4,roi_5,roi_6,roi_7,roi_8],name='roi_'+str(i))
                 
-                roi = np.zeros((3,3,512),dtype=np.float32)
-                roi = conv_4[i,x-1:x+2,y-1:y+2]
-                roi_concat[j]=roi
-            self.landmark_roi[i]=roi_concat
+                roi_list+=[roi]
+            self.landmark_roi=tf.pack(roi_list,name='landmark_roi')        
+
+                
+        elif model_type is 'upper':
+            numOfPoint = 6
+            
+        elif model_type is 'lower':
+            numOfPoint = 4
         
+        
+    
+    
+    def roi_pooling_2point(self,x1,x2,y1,y2,v1,v2,feature,idx):
+        
+        #여백
+        x1=int((x1+0.5)*28)
+        x2=int((x2+0.5)*28)
+        y1=int((y1+0.5)*28)
+        y2=int((y2+0.5)*28)
+        
+        x1=max(1,x1)
+        x1=min(26,x1)
+        x2=max(1,x2)
+        x2=min(26,x2)
+        y1=max(1,y1)
+        y1=min(26,y1)
+        y2=max(1,y2)
+        y2=min(26,y2)
+        
+        x_from=min(x1,x2)-1
+        x_to=max(x1,x2)+1
+        y_from=min(y1,y2)-1
+        y_to=max(y1,y2)+1
+        
+        
+        
+        if v1 is 0 and v2 is 0:
+            v=1
+        else:
+            v=0
+        
+        roi = feature[idx,x_from:x_to,y_from:y_to]*v
+        
+        roi_pooling = tf.nn.max_pool(roi,ksize=[x_to-x_from,y_to-y_from,1],strides=[1,3,3,1],padding='SAME',name='roi_pooling_'+str(idx))
+        
+        return roi_pooling
+    
+    def roi_pooling_4point(self,x1,x2,x3,x4,y1,y2,y3,y4,v1,v2,v3,v4,feature,idx):
+        
+        #여백
+        x1=int((x1+0.5)*28)
+        x2=int((x2+0.5)*28)
+        x3=int((x1+0.5)*28)
+        x4=int((x2+0.5)*28)
+        
+        y1=int((y1+0.5)*28)
+        y2=int((y2+0.5)*28)
+        y3=int((y1+0.5)*28)
+        y4=int((y2+0.5)*28)
+        
+        x1=max(1,x1)
+        x1=min(26,x1)
+        x2=max(1,x2)
+        x2=min(26,x2)
+        x3=max(1,x1)
+        x3=min(26,x1)
+        x4=max(1,x2)
+        x4=min(26,x2)
+        y1=max(1,y1)
+        y1=min(26,y1)
+        y2=max(1,y2)
+        y2=min(26,y2)
+        y3=max(1,y1)
+        y3=min(26,y1)
+        y4=max(1,y2)
+        y4=min(26,y2)
+        
+        x_from=min(x1,x2,x3,x4)-1
+        x_to=max(x1,x2,x3,x4)+1
+        y_from=min(y1,y2,y3,y4)-1
+        y_to=max(y1,y2,y3,y4)+1
+        
+        
+        
+        if v1 is 0 and v2 is 0:
+            v=1
+        else:
+            v=0
+        
+        roi = feature[idx,x_from:x_to,y_from:y_to]*v
+        
+        roi_pooling = tf.nn.max_pool(roi,ksize=[x_to-x_from,y_to-y_from,1],strides=[1,3,3,1],padding='SAME',name='roi_pooling_'+str(idx))
+        
+        return roi_pooling
+
+    
     """
     CNN
     """
@@ -88,7 +185,7 @@ class FashionNet_2nd:
         conv Layer
         """
         
-        self.conv_1_1 = self.conv_layer([3,3,3,64],[64],self.imgs,convSt,convB,'conv_1_1',Trainable=False)
+        self.conv_1_1 = self.conv_layer([3,3,3,64],[64],self.img,convSt,convB,'conv_1_1',Trainable=False)
         self.conv_1_2 = self.conv_layer([3,3,64,64],[64],self.conv_1_1,convSt,convB,'conv_1_2',Trainable=False)
         self.pool_1 = tf.nn.max_pool(self.conv_1_2, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool_1')
         
@@ -113,22 +210,6 @@ class FashionNet_2nd:
         self.pool_global = tf.nn.max_pool(self.conv_5_3, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='pool_5_global')
           
         """
-        pool_landmark
-        """
-        
-        self.pool_landmark_1 = tf.nn.max_pool(self.landmark_1,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_1')
-        self.pool_landmark_2 = tf.nn.max_pool(self.landmark_2,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_2')
-        self.pool_landmark_3 = tf.nn.max_pool(self.landmark_3,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_3')
-        self.pool_landmark_4 = tf.nn.max_pool(self.landmark_4,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_4')
-        self.pool_landmark_5 = tf.nn.max_pool(self.landmark_5,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_5')
-        self.pool_landmark_6 = tf.nn.max_pool(self.landmark_6,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_6')
-        self.pool_landmark_7 = tf.nn.max_pool(self.landmark_7,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_7')
-        self.pool_landmark_8 = tf.nn.max_pool(self.landmark_8,ksize=[1,3,3,1],strides=[1,3,3,1],padding='SAME',name='pool_landmark_8')
-        
-        self.pool_landmark = tf.concat([self.pool_landmark_1,self.pool_landmark_2,self.pool_landmark_3,self.pool_landmark_4,self.pool_landmark_5,self.pool_landmark_6,self.pool_landmark_7,self.pool_landmark_8],1)
-        
-        
-        """
         fc Layer
         """
         
@@ -143,18 +224,17 @@ class FashionNet_2nd:
         self.fc_1=tf.concat([tf.nn.l2_normalize(self.fc_1_landmark,1),tf.nn.l2_normalize(self.fc_1_global,1)],1)
         #self.fc_2 = self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout,relu=False)
         self.fc_2 = tf.nn.l2_normalize(self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout),1)
+        
         if model_type is 'full':
-            self.fc_3_category = self.fc_layer(self.fc_2,4096,10,fcSt,fcB,'fc_3_category',relu=False)
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'fc_3_category',relu=False)
             
         elif model_type is 'upper':
-            self.fc_3_category = self.fc_layer(self.fc_2,4096,20,fcSt,fcB,'fc_3_category',relu=False)
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,17,fcSt,fcB,'fc_3_category',relu=False)
             
         elif model_type is 'lower':
-            self.fc_3_category = self.fc_layer(self.fc_2,4096,16,fcSt,fcB,'fc_3_category',relu=False)
-        self.fc_3_attribute = tf.reshape(self.fc_layer(self.fc_2,4096,2000,fcSt,fcB,'fc_3_attribute',relu=False),[tf.shape(self.fc_2)[0],1000,2])
+            self.fc_3_category = self.fc_layer(self.fc_2,4096,12,fcSt,fcB,'fc_3_category',relu=False)
         
-        self.out_category_prob=tf.nn.softmax(self.fc_3_category)        
-        self.out_attribute_prob=tf.nn.softmax(self.fc_3_attribute)
+        self.cat_prob=tf.nn.softmax(self.fc_3_category)        
                    
     #save model
     def save_model(self,sess,path):
