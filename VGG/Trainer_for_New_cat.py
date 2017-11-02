@@ -8,7 +8,7 @@ import random
 import os
 
 class trainer:
-    def __init__(self,model_type,batSize=20):
+    def __init__(self,model_type,batSize=25):
         self.RGB_MEAN = np.array([[ 103.939, 116.779, 123.68 ]],dtype=np.float32)
         self.imgs = tf.placeholder(tf.float32, [None, 224, 224, 3])
         self.param=[]
@@ -24,6 +24,7 @@ class trainer:
         elif model_type is 'upper':
             self.num_of_cat = 17
             #self.img_cat=[0,1,2,3,4,5,6,-1,7,8,9,10,11,-1,12,13,14,15,16,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
+            #self.img_cat=[0,1,2,3,4,5,6,8,9,10,11,12,14,15,16,17,18]
             self.img_cat=[0,1,2,3,4,5,6,8,9,10,11,12,14,15,16,17,18]
         else:
             self.num_of_cat = 12
@@ -65,17 +66,16 @@ class trainer:
             self.cat.append(cat_out)
             self.cat_prob[i][cat_out]=1
             
-            self.x+=[self.x_list[idx]]
-            self.y+=[self.y_list[idx]]
-            self.v+=[self.v_list[idx]]
-       
-        for i in range(self.batSize):
+            
             imageFileName = imgDir+imgList[i]
             img = Image.open(imageFileName)
+            
+            self.x+=[self.x_list[idx]/img.size[0]-0.5]
+            self.y+=[self.y_list[idx]/img.size[1]-0.5]
+            self.v+=[self.v_list[idx]]
+            
             img = self.norm_image(img)
             self.batch[i]=img
-            
-
 
     def load_image(self,path):
         self.batch = np.zeros((1,224,224,3),dtype=np.float32) # batch 초기화
@@ -233,16 +233,16 @@ class trainer:
         for i in range(70000):
             self.load_batch()
             conv_4=sess.run(fn.conv_4_3,feed_dict={fn.img:self.batch})
-            fn.get_roi(self.x,self.y,conv_4,self.batSize,self.model_type)
+            roi=fn.get_roi(self.x,self.y,self.v,conv_4,self.batSize,self.model_type,sess)
             if self.model_type is 'full':
-                sess.run(train,feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.pool_landmark:fn.landmark_roi,fn.keep_prob:0.5}) 
+                sess.run(train,feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5}) 
             elif self.model_type is 'upper':
                 sess.run(train,feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],self.output_category:self.cat_prob,fn.keep_prob:0.5})
             elif self.model_type is 'lower':
                 sess.run(train,feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],self.output_category:self.cat_prob,fn.keep_prob:0.5})
             #if i%50 is 0:
             if self.model_type is 'full':
-                [l1,out]=sess.run([self.loss,fn.cat_prob],feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.pool_landmark:fn.landmark_roi,fn.keep_prob:0.5})
+                [l1,out]=sess.run([self.loss,fn.cat_prob],feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],self.output_category:self.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
             elif self.model_type is 'upper':
                 [l1,out]=sess.run([self.loss,fn.cat_prob],feed_dict={fn.img:self.batch,fn.landmark_visibility:self.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],self.output_category:self.cat_prob,fn.keep_prob:0.5})
             elif self.model_type is 'lower':
@@ -271,7 +271,7 @@ tr=trainer('full')
 tr.train()
 """
 
-tr=trainer('full')
+tr=trainer('lower')
 tr.readCsv()
 
 fn=fashionnet.FashionNet(tr.model_type)
@@ -279,49 +279,73 @@ fn.build_net(model_type=tr.model_type,Dropout=True)
 tr.define_loss(fn)
 
 #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
-#full: 0.00001 10000 batch
-#upper: 0.000005 30000batch
-learningRate = 0.000005
+#full: 0.00005 10000 batch 0.00001 10000batch
+#upper: 0.00001 30000batch 
+learningRate = 0.000001
 train = tf.train.AdamOptimizer(learningRate).minimize(tr.loss)
 
 sess=tf.Session()
 sess.run(tf.global_variables_initializer())
 
 
-fn.restore_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_pre/init/model') 
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/init/model') 
 print('--------------------------------------------------------------')                
-        
-for i in range(70000):
+acc_list=[]        
+for i in range(20000):
     tr.load_batch()
     conv_4=sess.run(fn.conv_4_3,feed_dict={fn.img:tr.batch})
-    fn.get_roi(tr.x,tr.y,conv_4,tr.batSize,tr.model_type)
+    roi=fn.get_roi(tr.x,tr.y,tr.v,conv_4,tr.batSize,tr.model_type,sess)
+    """
     if tr.model_type is 'full':
-        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.pool_landmark:fn.landmark_roi,fn.keep_prob:0.5}) 
+        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5}) 
     elif tr.model_type is 'upper':
-        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
+        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
     elif tr.model_type is 'lower':
-        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
+        sess.run(train,feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
+    """
     #if i%50 is 0:
     if tr.model_type is 'full':
-        [l1,out]=sess.run([tr.loss,fn.cat_prob],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],fn.landmark_7:fn.landmark_roi[:,6],fn.landmark_8:fn.landmark_roi[:,7],tr.output_category:tr.cat_prob,fn.pool_landmark:fn.landmark_roi,fn.keep_prob:0.5})
+        [l1,out,t]=sess.run([tr.loss,fn.cat_prob,train],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
     elif tr.model_type is 'upper':
-        [l1,out]=sess.run([tr.loss,fn.cat_prob],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],fn.landmark_5:fn.landmark_roi[:,4],fn.landmark_6:fn.landmark_roi[:,5],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
+        [l1,out,t]=sess.run([tr.loss,fn.cat_prob,train],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
     elif tr.model_type is 'lower':
-        [l1,out]=sess.run([tr.loss,fn.cat_prob],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,fn.landmark_1:fn.landmark_roi[:,0],fn.landmark_2:fn.landmark_roi[:,1],fn.landmark_3:fn.landmark_roi[:,2],fn.landmark_4:fn.landmark_roi[:,3],tr.output_category:tr.cat_prob,fn.keep_prob:0.5})
+        [l1,out,t]=sess.run([tr.loss,fn.cat_prob,train],feed_dict={fn.img:tr.batch,fn.landmark_visibility:tr.v,tr.output_category:tr.cat_prob,fn.pool_landmark:roi,fn.keep_prob:0.5})
  
     print('< ',str(i),' batch, ','번째 batch >')
     print('loss: ',l1)
-    print(np.array(tr.cat))
-    print(np.argmax(out,1))
-    print(out)
+    groundtruth=np.array(tr.cat)
+    output=np.argmax(out,1)
+    count=0;
+    for j in range(tr.batSize):
+        if(groundtruth[j]==output[j]):
+            count = count+1
+    accuracy = (count/tr.batSize)*100.
+    acc_list+=[accuracy]
+    print('gt: ',groundtruth)
+    print('op: ',output)
+    print('accuracy: ',accuracy,'%')
     print('--------------------------------------------------------------')
+    
+
     if i%1000 is 0:
-        dirname = 'C:/Users/libar/Desktop/cat_'+tr.model_type+'_pre/'+str(i)+' batch'
+        dirname = 'C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/'+str(i)+' batch'
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
-        fn.save_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_pre/'+str(i)+' batch/model')
+        fn.save_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/'+str(i)+' batch/model')
+        
+        f=open('C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/acc_list_'+str(i)+' batch.csv','w', encoding='utf-8', newline='')
+        csvWriter=csv.writer(f,delimiter=',')
+        for i in range(len(acc_list)):
+            csvWriter.writerow([acc_list[i]])
+        f.close()
     
-dirname ='C:/Users/libar/Desktop/cat_'+tr.model_type+'_pre/final/model'
+dirname ='C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/final'
 if not os.path.isdir(dirname):
     os.mkdir(dirname)            
-fn.save_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'/final/model')
+fn.save_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/final/model')
+
+f=open('C:/Users/libar/Desktop/cat_'+tr.model_type+'_new/acc_list_final.csv','w', encoding='utf-8', newline='')
+csvWriter=csv.writer(f,delimiter=',')
+for i in range(len(acc_list)):
+    csvWriter.writerow([acc_list[i]])
+f.close()

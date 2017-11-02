@@ -14,10 +14,10 @@ class FashionNet:
             self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
         elif self.model_type is 'upper':
             self.numOfPoint = 6
-            self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
+            self.pool_landmark = tf.placeholder(tf.float32, [None, 6, 3, 3, 512],name='pool_landmark')
         elif model_type is 'lower':
             self.numOfPoint = 4
-            self.pool_landmark = tf.placeholder(tf.float32, [None, 8, 3, 3, 512],name='pool_landmark')
+            self.pool_landmark = tf.placeholder(tf.float32, [None, 4, 3, 3, 512],name='pool_landmark')
             
         self.landmark_visibility = tf.placeholder(tf.float32,[None,self.numOfPoint])
         self.param=[]
@@ -52,38 +52,63 @@ class FashionNet:
             return out
     
             
-    def get_roi(self,l_x,l_y,v,conv_4,batSize,model_type):
+    def get_roi(self,l_x,l_y,l_v,conv_4,batSize,model_type,sess):
+        
         if model_type is 'full':
-            roi_list=[]
             
+            roi=np.zeros((batSize,8,3,3,512),dtype=np.float32)
+        
             for i in range(batSize):
-                roi_1 = self.roi_pooling_2point(l_x[0],l_x[1],l_y[0],l_y[1],conv_4,i)
-                roi_2 = self.roi_pooling_2point(l_x[0],l_x[2],l_y[0],l_y[2],conv_4,i)
-                roi_3 = self.roi_pooling_2point(l_x[1],l_x[3],l_y[1],l_y[3],conv_4,i)
-                roi_4 = self.roi_pooling_2point(l_x[4],l_x[5],l_y[4],l_y[5],conv_4,i)
-                roi_5 = self.roi_pooling_2point(l_x[6],l_x[7],l_y[6],l_y[7],conv_4,i)
-                roi_6 = self.roi_pooling_2point(l_x[4],l_x[7],l_y[4],l_y[7],conv_4,i)
-                roi_7 = self.roi_pooling_2point(l_x[5],l_x[6],l_y[5],l_y[6],conv_4,i)
-                roi_8 = self.roi_pooling_4point(l_x[0],l_x[1],l_y[4],l_y[5],l_x[0],l_x[1],l_y[4],l_y[5],conv_4,i)
+                self.roi_1 = self.roi_pooling_2point(l_x[i][0],l_x[i][1],l_y[i][0],l_y[i][1],l_v[i][0],l_v[i][1],conv_4,i)
+                self.roi_2 = self.roi_pooling_2point(l_x[i][0],l_x[i][2],l_y[i][0],l_y[i][2],l_v[i][0],l_v[i][2],conv_4,i)
+                self.roi_3 = self.roi_pooling_2point(l_x[i][1],l_x[i][3],l_y[i][1],l_y[i][3],l_v[i][1],l_v[i][3],conv_4,i)
+                self.roi_4 = self.roi_pooling_2point(l_x[i][4],l_x[i][5],l_y[i][4],l_y[i][5],l_v[i][4],l_v[i][5],conv_4,i)
+                self.roi_5 = self.roi_pooling_2point(l_x[i][6],l_x[i][7],l_y[i][6],l_y[i][7],l_v[i][6],l_v[i][7],conv_4,i)
+                self.roi_6 = self.roi_pooling_2point(l_x[i][4],l_x[i][7],l_y[i][4],l_y[i][7],l_v[i][4],l_v[i][7],conv_4,i)
+                self.roi_7 = self.roi_pooling_2point(l_x[i][5],l_x[i][6],l_y[i][5],l_y[i][6],l_v[i][5],l_v[i][6],conv_4,i)
+                self.roi_8 = self.roi_pooling_4point(l_x[i][0],l_x[i][1],l_x[i][4],l_x[i][5],l_y[i][0],l_y[i][1],l_y[i][4],l_y[i][5],l_v[i][0],l_v[i][1],l_v[i][4],l_v[i][5],conv_4,i)
                 
-                roi = tf.pack([roi_1,roi_2,roi_3,roi_4,roi_5,roi_6,roi_7,roi_8],name='roi_'+str(i))
+                roi_concat = np.array([self.roi_1,self.roi_2,self.roi_3,self.roi_4,self.roi_5,self.roi_6,self.roi_7,self.roi_8],dtype=np.float32)
                 
-                roi_list+=[roi]
-            self.landmark_roi=tf.pack(roi_list,name='landmark_roi')        
+                roi[i]=roi_concat
 
                 
         elif model_type is 'upper':
-            numOfPoint = 6
+            
+            roi=np.zeros((batSize,6,3,3,512),dtype=np.float32)
+        
+            for i in range(batSize):
+                self.roi_1 = self.roi_pooling_2point(l_x[i][0],l_x[i][1],l_y[i][0],l_y[i][1],l_v[i][0],l_v[i][1],conv_4,i)
+                self.roi_2 = self.roi_pooling_2point(l_x[i][0],l_x[i][2],l_y[i][0],l_y[i][2],l_v[i][0],l_v[i][2],conv_4,i)
+                self.roi_3 = self.roi_pooling_2point(l_x[i][1],l_x[i][3],l_y[i][1],l_y[i][3],l_v[i][1],l_v[i][3],conv_4,i)
+                self.roi_4 = self.roi_pooling_2point(l_x[i][4],l_x[i][5],l_y[i][4],l_y[i][5],l_v[i][4],l_v[i][5],conv_4,i)
+                self.roi_5 = self.roi_pooling_2point(l_x[i][0],l_x[i][5],l_y[i][0],l_y[i][5],l_v[i][0],l_v[i][5],conv_4,i)
+                self.roi_6 = self.roi_pooling_2point(l_x[i][1],l_x[i][4],l_y[i][1],l_y[i][4],l_v[i][1],l_v[i][4],conv_4,i)
+                
+                roi_concat = np.array([self.roi_1,self.roi_2,self.roi_3,self.roi_4,self.roi_5,self.roi_6],dtype=np.float32)
+                
+                roi[i]=roi_concat
             
         elif model_type is 'lower':
-            numOfPoint = 4
+            roi=np.zeros((batSize,4,3,3,512),dtype=np.float32)
+        
+            for i in range(batSize):
+                self.roi_1 = self.roi_pooling_2point(l_x[i][0],l_x[i][1],l_y[i][0],l_y[i][1],l_v[i][0],l_v[i][1],conv_4,i)
+                self.roi_2 = self.roi_pooling_2point(l_x[i][2],l_x[i][3],l_y[i][2],l_y[i][3],l_v[i][2],l_v[i][3],conv_4,i)
+                self.roi_3 = self.roi_pooling_2point(l_x[i][0],l_x[i][3],l_y[i][0],l_y[i][3],l_v[i][0],l_v[i][3],conv_4,i)
+                self.roi_4 = self.roi_pooling_2point(l_x[i][1],l_x[i][2],l_y[i][1],l_y[i][2],l_v[i][1],l_v[i][2],conv_4,i)
+                
+                roi_concat = np.array([self.roi_1,self.roi_2,self.roi_3,self.roi_4],dtype=np.float32)
+                
+                roi[i]=roi_concat
         
         
-    
+        return roi
     
     def roi_pooling_2point(self,x1,x2,y1,y2,v1,v2,feature,idx):
         
-        #여백
+        #roi 구하기
+        
         x1=int((x1+0.5)*28)
         x2=int((x2+0.5)*28)
         y1=int((y1+0.5)*28)
@@ -99,22 +124,50 @@ class FashionNet:
         y2=min(26,y2)
         
         x_from=min(x1,x2)-1
-        x_to=max(x1,x2)+1
+        x_to=max(x1,x2)+2
         y_from=min(y1,y2)-1
-        y_to=max(y1,y2)+1
+        y_to=max(y1,y2)+2
+
+        x_len=x_to-x_from
+        y_len=y_to-y_from
+        x_sub=int(x_len/3)
+        y_sub=int(y_len/3)
         
-        
-        
-        if v1 is 0 and v2 is 0:
+        if int(x_len%3) is 0:
+            x=[0,x_sub,x_sub*2,x_to]
+        elif int(x_len%3) is 1:
+            x=[0,x_sub,x_sub*2,x_to]
+        elif int(x_len%3) is 2:
+            x=[0,x_sub,x_sub*2+1,x_to]
+            
+        if int(y_len%3) is 0:
+            y=[0,y_sub,y_sub*2,y_to]
+        elif int(y_len%3) is 1:
+            y=[0,y_sub,y_sub*2,y_to]
+        elif int(y_len%3) is 2:
+            y=[0,y_sub,y_sub*2+1,y_to]
+            
+        #print('x: ',x)
+        #print('y: ',y)
+        if int(v1) is 0 and int(v2) is 0:
             v=1
         else:
             v=0
         
         roi = feature[idx,x_from:x_to,y_from:y_to]*v
         
-        roi_pooling = tf.nn.max_pool(roi,ksize=[x_to-x_from,y_to-y_from,1],strides=[1,3,3,1],padding='SAME',name='roi_pooling_'+str(idx))
+        roi_pooling = np.zeros((3,3,512),dtype=np.float32)
         
+        for i in range(3):
+            for j in range(3):
+                self.sub_feature = roi[x[i]:x[i+1],y[i]:y[i+1],:]
+                #print(self.sub_feature.shape)
+                for k in range(512):
+                    roi_pooling[i][j][k] = self.sub_feature[:,:,k].max()
+         
         return roi_pooling
+    
+    
     
     def roi_pooling_4point(self,x1,x2,x3,x4,y1,y2,y3,y4,v1,v2,v3,v4,feature,idx):
         
@@ -147,24 +200,49 @@ class FashionNet:
         y4=min(26,y2)
         
         x_from=min(x1,x2,x3,x4)-1
-        x_to=max(x1,x2,x3,x4)+1
+        x_to=max(x1,x2,x3,x4)+2
         y_from=min(y1,y2,y3,y4)-1
-        y_to=max(y1,y2,y3,y4)+1
+        y_to=max(y1,y2,y3,y4)+2
         
+        x_len=x_to-x_from
+        y_len=y_to-y_from
+        x_sub=int(x_len/3)
+        y_sub=int(y_len/3)
+
+
+        if int(x_len%3) is 0:
+            x=[0,x_sub,x_sub*2,x_to]
+        elif int(x_len%3) is 1:
+            x=[0,x_sub,x_sub*2,x_to]
+        elif int(x_len%3) is 2:
+            x=[0,x_sub,x_sub*2+1,x_to]
+            
+        if int(y_len%3) is 0:
+            y=[0,y_sub,y_sub*2,y_to]
+        elif int(y_len%3) is 1:
+            y=[0,y_sub,y_sub*2,y_to]
+        elif int(y_len%3) is 2:
+            y=[0,y_sub,y_sub*2+1,y_to]
         
+        #print('x: ',x)
+        #print('y: ',y)
         
-        if v1 is 0 and v2 is 0:
+        if int(v1) is 0 and int(v2) is 0:
             v=1
         else:
             v=0
         
         roi = feature[idx,x_from:x_to,y_from:y_to]*v
         
-        roi_pooling = tf.nn.max_pool(roi,ksize=[x_to-x_from,y_to-y_from,1],strides=[1,3,3,1],padding='SAME',name='roi_pooling_'+str(idx))
-        
-        return roi_pooling
-
+        roi_pooling = np.zeros((3,3,512),dtype=np.float32)
+        for i in range(3):
+            for j in range(3):
+                self.sub_feature = roi[x[i]:x[i+1],y[i]:y[i+1],:]
+                #print(sub_feature.shape)
+                for k in range(512):
+                    roi_pooling[i][j][k] = self.sub_feature[:,:,k].max()
     
+        return roi_pooling
     """
     CNN
     """

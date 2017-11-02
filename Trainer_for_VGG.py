@@ -28,7 +28,7 @@ class trainer:
         else:
             self.num_of_cat = 12
             #self.img_cat=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,1,2,-1,3,4,-1,5,6,-1,7,8,9,10,11,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
-            [21,22,23,25,26,28,29,31,32,33,34,35]
+            self.img_cat=[21,22,23,25,26,28,29,31,32,33,34,35]
             
             
 
@@ -175,7 +175,7 @@ class trainer:
         self.readCsv()
 
         fn=fashionnet.FashionNet()
-        fn.build_net(model_type='upper',Dropout=True)
+        fn.build_net(model_type='lower',Dropout=True)
         self.define_loss(fn)
 
         #learningRate= 0.0001(5 epoch까지) 0.00001(그 다음 5 epoch)
@@ -188,7 +188,7 @@ class trainer:
         sess.run(tf.global_variables_initializer())
         
         
-        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_upper/init/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_lower/init/model') 
         print('--------------------------------------------------------------')                
                 
         for i in range(70000):
@@ -203,16 +203,16 @@ class trainer:
             print(out)
             print('--------------------------------------------------------------')
             if i%1000 is 0:
-                dirname = 'C:/Users/libar/Desktop/cat_upper/'+str(i)+' batch'
+                dirname = 'C:/Users/libar/Desktop/cat_lower/'+str(i)+' batch'
                 if not os.path.isdir(dirname):
                     os.mkdir(dirname)
-                fn.save_model(sess,'C:/Users/libar/Desktop/cat_upper/'+str(i)+' batch/model')
+                fn.save_model(sess,'C:/Users/libar/Desktop/cat_lower/'+str(i)+' batch/model')
             
-        dirname ='C:/Users/libar/Desktop/cat_upper/final/model'
+        dirname ='C:/Users/libar/Desktop/cat_lower/final/model'
         if not os.path.isdir(dirname):
             os.mkdir(dirname)            
-        fn.save_model(sess,'C:/Users/libar/Desktop/cat_upper/final/model')
+        fn.save_model(sess,'C:/Users/libar/Desktop/cat_lower/final/model')
 
 
-tr=trainer('upper')
+tr=trainer('lower')
 tr.train()
