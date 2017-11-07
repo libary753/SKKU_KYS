@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 from PIL import Image
 import csv
-import FashionNet_VGG as fashionnet
+import FashionNet_VGG_Cat as fashionnet
 import random
 import os
 
@@ -19,16 +19,19 @@ class trainer:
         self.img_stack=[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
         if model_type is 'full':
             self.num_of_cat = 6
-            #self.img_cat=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,1,2,-1,3,-1,-1,4,5,-1,-1]
+            self.cat_img=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,-1,1,2,-1,3,-1,-1,4,5,-1,-1]
             self.img_cat=[38,40,41,43,46,47]
         elif model_type is 'upper':
             self.num_of_cat = 17
-            #self.img_cat=[0,1,2,3,4,5,6,-1,7,8,9,10,11,-1,12,13,14,15,16,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
+            self.cat_img=[0,1,2,3,4,5,6,-1,7,8,9,10,11,-1,12,13,14,15,16,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
             self.img_cat=[0,1,2,3,4,5,6,8,9,10,11,12,14,15,16,17,18]
         else:
             self.num_of_cat = 12
-            #self.img_cat=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,1,2,-1,3,4,-1,5,6,-1,7,8,9,10,11,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
-            [21,22,23,25,26,28,29,31,32,33,34,35]
+            self.cat_img=[-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,1,2,-1,3,4,-1,5,6,-1,7,8,9,10,11,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
+            self.img_cat=[21,22,23,25,26,28,29,31,32,33,34,35]
+            
+        self.output_category=tf.placeholder(tf.float32, [self.batSize, self.num_of_cat])
+            
             
             
 
@@ -67,8 +70,39 @@ class trainer:
             img = Image.open(imageFileName)
             img = self.norm_image(img)
             self.batch[i]=img
+            
+    def load_batch_for_test(self,batNum):
+        
+        imgDir=('C:/Users/libar/Desktop/Attribute Prediction/')
+        self.batch = np.zeros((self.batSize,224,224,3),dtype=np.float32) # batch 초기화
+        self.cat_prob = np.zeros((self.batSize,self.num_of_cat),dtype=np.float32)
+        self.x = []
+        self.y = []
+        self.v = []
+        self.cat = []    
+        imgList =[]
 
+        
+        for i in range(self.batSize):
+            
+            idx =self.img_list[self.batSize*batNum+i]
+            imgList.append(self.img_list[self.batSize*batNum+i])
+            cat_out=self.cat_list[self.batSize*batNum+i]
+            self.cat.append(cat_out)
+            
+            imgPath=self.annoList[imgList[i]][1]
+            
+            imageFileName = imgDir+imgPath
+            img = Image.open(imageFileName)
+            
+            self.x+=[self.x_list[idx]/img.size[0]-0.5]
+            self.y+=[self.y_list[idx]/img.size[1]-0.5]
+            self.v+=[self.v_list[idx]]
+            
+            img = self.norm_image(img)
+            self.batch[i]=img
 
+    
     def load_image(self,path):
         self.batch = np.zeros((1,224,224,3),dtype=np.float32) # batch 초기화
     
@@ -124,6 +158,61 @@ class trainer:
         for i in range(50):
             random.shuffle(self.img_stack[i])
 
+    def readCsv_test(self):
+        self.annoList=[]
+        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Final/test.csv','r')
+        csvReader = csv.reader(f)
+        for i in csvReader:          
+            self.annoList.append(i)
+        f.close()
+        
+        self.arr=np.array(self.annoList)
+        self.img_list=[]
+        self.cat_list=[]
+        
+        
+        if self.model_type is 'upper':
+            self.model_num=1
+        elif self.model_type is 'lower':
+            self.model_num=2
+        elif self.model_type is 'full':
+            self.model_num=3
+        
+        for i in range(self.arr.shape[0]):
+            if int(self.arr[i][3]) is 1 and int(self.arr[i][4]) is self.model_num:
+                self.img_list.append(int(self.arr[i][0]))#img_list에 index 저장
+                self.cat_list.append(int(self.arr[i][2]))
+            
+        self.landList=[]
+        f = open('C:/Users/libar/Desktop/Attribute Prediction/Anno/Final/Landmark.csv','r')
+        csvReader = csv.reader(f)
+        for i in csvReader:          
+            self.landList.append(i)
+        f.close()
+        
+        
+        
+        arr=np.array(self.landList)
+        
+        for i in range(arr.shape[0]):
+                for j in range(arr.shape[1]):
+                    if len(arr[i][j]) is 0:
+                        arr[i][j]='0'
+        
+        if self.model_type is 'full':
+            self.v_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'),arr[:,20].astype('float32'),arr[:,23].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'),arr[:,21].astype('float32'),arr[:,24].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'),arr[:,22].astype('float32'),arr[:,25].astype('float32'))).T
+            
+        elif self.model_type is 'upper':
+            self.v_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'),arr[:,14].astype('float32'),arr[:,17].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'),arr[:,15].astype('float32'),arr[:,18].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'),arr[:,16].astype('float32'),arr[:,19].astype('float32'))).T
+            
+        elif self.model_type is 'lower':
+            self.v_list=np.vstack((arr[:,2].astype('float32'),arr[:,5].astype('float32'),arr[:,8].astype('float32'),arr[:,11].astype('float32'))).T
+            self.x_list=np.vstack((arr[:,3].astype('float32'),arr[:,6].astype('float32'),arr[:,9].astype('float32'),arr[:,12].astype('float32'))).T
+            self.y_list=np.vstack((arr[:,4].astype('float32'),arr[:,7].astype('float32'),arr[:,10].astype('float32'),arr[:,13].astype('float32'))).T
     
    
     def define_loss(self,fn):
@@ -170,5 +259,72 @@ class trainer:
             os.mkdir(dirname)            
         fn.save_model(sess,'C:/Users/libar/Desktop/cat_full/final/model')
 
-tr=trainer('full')
-tr.train()
+tr=trainer('lower')
+tr.readCsv_test()
+
+fn=fashionnet.FashionNet()
+fn.build_net(model_type=tr.model_type,Dropout=False)
+
+sess=tf.Session()
+sess.run(tf.global_variables_initializer())
+
+fn.restore_model(sess,'C:/Users/libar/Desktop/cat_'+tr.model_type+'_vgg/final/model') 
+
+gt=[]
+result1=[]
+result2=[]
+result3=[]
+print('--------------------------------------------------------------')                
+acc_list=[]        
+for i in range(int(len(tr.img_list)/tr.batSize)):
+    tr.load_batch_for_test(i)
+
+    #if i%50 is 0:
+    if tr.model_type is 'full':
+        [out]=sess.run([fn.cat_prob],feed_dict={fn.img:tr.batch,tr.output_category:tr.cat_prob})
+    elif tr.model_type is 'upper':
+        [out]=sess.run([fn.cat_prob],feed_dict={fn.img:tr.batch,tr.output_category:tr.cat_prob})
+    elif tr.model_type is 'lower':
+        [out]=sess.run([fn.cat_prob],feed_dict={fn.img:tr.batch,tr.output_category:tr.cat_prob})
+ 
+    print('< ',str(i),' batch, ','번째 batch >')
+    
+    o1=[]        
+    o2=[]        
+    o3=[]        
+    g = tr.cat
+    r1=np.argmax(out,1)
+    for i in range(tr.batSize):
+        out[i][r1[i]]=0
+    
+    r2=np.argmax(out,1)
+    for i in range(tr.batSize):
+        out[i][r2[i]]=0
+        
+    r3=np.argmax(out,1)
+        
+    
+    for i in range(tr.batSize):
+        o1=o1+[tr.img_cat[r1[i]]+1]
+        o2=o2+[tr.img_cat[r2[i]]+1]
+        o3=o3+[tr.img_cat[r3[i]]+1]
+            
+    gt=gt+g
+    result1=result1+o1
+    result2=result2+o2
+    result3=result3+o3
+    
+    count=0;
+
+    print('gt: ',g)
+    print('o1: ',o1)
+    print('o2: ',o2)
+    print('o3: ',o3)
+    print('--------------------------------------------------------------')
+
+final = np.array([gt,result1,result2,result3])
+f=open('C:/Users/libar/Desktop/test_'+tr.model_type+'_VGG.csv','w', encoding='utf-8', newline='')
+csvWriter=csv.writer(f,delimiter=',')
+for i in range(len(final.T)):
+    csvWriter.writerow(final.T[i])
+f.close()

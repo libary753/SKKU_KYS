@@ -247,7 +247,7 @@ class FashionNet:
     CNN
     """
     
-    def build_net(self,model_type,Dropout=False):
+    def build_net(self,Dropout=False):
         
         """
         keep_prob for dropout
@@ -303,13 +303,13 @@ class FashionNet:
         #self.fc_2 = self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout,relu=False)
         self.fc_2 = tf.nn.l2_normalize(self.fc_layer(self.fc_1,5120,4096,fcSt,fcB,'fc_2',dropout=Dropout),1)
         
-        if model_type is 'full':
+        if self.model_type is 'full':
             self.fc_3_category = self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'fc_3_category',relu=False)
             
-        elif model_type is 'upper':
+        elif self.model_type is 'upper':
             self.fc_3_category = self.fc_layer(self.fc_2,4096,17,fcSt,fcB,'fc_3_category',relu=False)
             
-        elif model_type is 'lower':
+        elif self.model_type is 'lower':
             self.fc_3_category = self.fc_layer(self.fc_2,4096,12,fcSt,fcB,'fc_3_category',relu=False)
         
         self.cat_prob=tf.nn.softmax(self.fc_3_category)        

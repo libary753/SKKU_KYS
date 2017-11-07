@@ -293,10 +293,10 @@ class trainer:
         sess=tf.Session()
         sess.run(tf.global_variables_initializer())
         #fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/init/model') 
-        fn.restore_model(sess,'C:/Users/libar/Desktop/cat_full/4 epoch/final/model') 
+        fn.restore_model(sess,'C:/Users/libar/Desktop/retrieval_full/init/model') 
         print('--------------------------------------------------------------')                
                 
-        for j in range(5,15):
+        for j in range(10):
             self.readCsv_attribute()
             for i in range(2620):
                 self.load_batch_for_attribute(i,batsize)

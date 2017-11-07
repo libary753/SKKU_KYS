@@ -6,8 +6,9 @@ import csv
 import datetime
 
 
-class FashionNet_1st:
-    def __init__(self):
+class FashionNet:
+    def __init__(self,model_type):
+        self.model_type=model_type
         self.RGB_MEAN = np.array([[ 102.9801, 115.9465, 122.7717]],dtype=np.float32)
         self.img = tf.placeholder(tf.float32, [None, 224, 224, 3])
         self.param=[]
@@ -45,7 +46,7 @@ class FashionNet_1st:
     CNN
     """
     
-    def build_net(self,model_type,Dropout=False):
+    def build_net(self,Dropout=False):
         
         """
         keep_prob for dropout
@@ -104,13 +105,13 @@ class FashionNet_1st:
         self.out_visibility_3=tf.nn.softmax(self.fc_3_visibility_3)
         self.out_visibility_4=tf.nn.softmax(self.fc_3_visibility_4)
         
-        if model_type is 'full' or model_type is 'upper':
+        if self.model_type is 'full' or self.model_type is 'upper':
             self.fc_3_visibility_5 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_5',relu=False)
             self.fc_3_visibility_6 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_6',relu=False)
             self.out_visibility_5=tf.nn.softmax(self.fc_3_visibility_5)
             self.out_visibility_6=tf.nn.softmax(self.fc_3_visibility_6)
             
-        if model_type is 'full':
+        if self.model_type is 'full':
             self.fc_3_visibility_7 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_7',relu=False)
             self.fc_3_visibility_8 =self.fc_layer(self.fc_2,4096,3,fcSt,fcB,'out_visibility_8',relu=False)
             self.out_visibility_7=tf.nn.softmax(self.fc_3_visibility_7)
@@ -118,21 +119,21 @@ class FashionNet_1st:
 
 
         
-        if model_type is 'full':
+        if self.model_type is 'full':
             self.out_landmark_x =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
             self.out_landmark_y =self.fc_layer(self.fc_2,4096,8,fcSt,fcB,'out_landmark',relu=False)
-            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6,self.fc_3_visibility_7,self.fc_3_visibility_8],0)
+            self.visibility=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6,self.fc_3_visibility_7,self.fc_3_visibility_8],0)
             self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6,self.out_visibility_7,self.out_visibility_8]
-        elif model_type is 'upper':
+        elif self.model_type is 'upper':
             self.out_landmark_x =self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'out_landmark',relu=False)
             self.out_landmark_y =self.fc_layer(self.fc_2,4096,6,fcSt,fcB,'out_landmark',relu=False)
-            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6],0)
+            self.visibility=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4,self.fc_3_visibility_5,self.fc_3_visibility_6],0)
             self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4,self.out_visibility_5,self.out_visibility_6]
         
         else:
             self.out_landmark_x =self.fc_layer(self.fc_2,4096,4,fcSt,fcB,'out_landmark',relu=False)
             self.out_landmark_y =self.fc_layer(self.fc_2,4096,4,fcSt,fcB,'out_landmark',relu=False)
-            self.visibility_fc=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4],0)
+            self.visibility=tf.concat([self.fc_3_visibility_1,self.fc_3_visibility_2,self.fc_3_visibility_3,self.fc_3_visibility_4],0)
             self.out = [self.out_landmark_x,self.out_landmark_y,self.out_visibility_1,self.out_visibility_2,self.out_visibility_3,self.out_visibility_4]
             
         
