@@ -93,7 +93,9 @@ f.close()
 path = np.array(img_path)
  
 model_type='upper'
-i_path='C:/Users/libar/Desktop/image_test/yellow_tee.jpg'
+#i_path='C:/Users/libar/Desktop/image_test/yellow_tee.jpg'
+imgDir = ('C:/Users/libar/Desktop/Attribute Prediction/')
+i_path=imgDir+img_path[1][0]
 image = Image.open(i_path)
 #i_idx = 207
 #i_path='C:/Users/libar/Desktop/Attribute Prediction/'+img_path[i_idx][0]
@@ -150,15 +152,17 @@ for i in range(len(feat)):
 
 idx=[]
 
-for i in range(10):
+for i in range(15):
     idx.append(np.argmin(dist))
     dist[idx[i]]= np.finfo(np.float32).max
 
 imgDir = ('C:/Users/libar/Desktop/Attribute Prediction/')
 result = []
-for i in range(10):
+for i in range(15):
     result.append(imgDir + path[idx[i]][0])
 
 img_list = []
+count = 0
 for i in result:
     img_list.append(Image.open(i))
+    Image.open(i).show()

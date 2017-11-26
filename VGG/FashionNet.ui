@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1080</width>
+    <height>835</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QPushButton" name="Button_Open_Image">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>120</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Open Image</string>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_1">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>80</y>
+      <width>400</width>
+      <height>400</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Button_Find_Landmark">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>200</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Find Landmark</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Button_Find_Category">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>240</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Find Category</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Button_Search">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>280</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Seearch</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="Combobox_Type">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>160</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="layoutDirection">
+     <enum>Qt::LeftToRight</enum>
+    </property>
+    <item>
+     <property name="text">
+      <string>Full</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Upper</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>Lower</string>
+     </property>
+    </item>
+   </widget>
+   <widget class="QGraphicsView" name="White_12">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>80</y>
+      <width>400</width>
+      <height>400</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_2">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_4">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_5">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_6">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_7">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_11">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_3">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_10">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_9">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QGraphicsView" name="White_8">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Label_Search">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>500</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>&lt; Image Search &gt;</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Label_Category">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>500</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>13</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="text">
+     <string>&lt; Category &gt;</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Category_1">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>550</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Category_1</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Category_2">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>590</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Category_2</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Category_3">
+    <property name="geometry">
+     <rect>
+      <x>60</x>
+      <y>630</y>
+      <width>181</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>11</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Category_3</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Label_Category_2">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>20</y>
+      <width>331</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>25</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Fashion Net GUI</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Origin">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>80</y>
+      <width>400</width>
+      <height>400</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Landmark">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>80</y>
+      <width>400</width>
+      <height>400</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_1">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_2">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_3">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_4">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_5">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>540</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_6">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_7">
+    <property name="geometry">
+     <rect>
+      <x>400</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_8">
+    <property name="geometry">
+     <rect>
+      <x>520</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_9">
+    <property name="geometry">
+     <rect>
+      <x>640</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Image_Search_10">
+    <property name="geometry">
+     <rect>
+      <x>760</x>
+      <y>660</y>
+      <width>110</width>
+      <height>110</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="Button_Load_Weight">
+    <property name="geometry">
+     <rect>
+      <x>900</x>
+      <y>80</y>
+      <width>150</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Load Weight</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1080</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
